@@ -21,5 +21,15 @@
           { "key": "Content-Type", "value": "image/png" }
         ]
       }
+    ],
+    "rewrites": [
+      {
+        "source": "/api/(.*)",
+        "destination": "https://1337brackets-backend.vercel.app/api/$1"
+      },
+      {
+        "source": "/socket.io/(.*)",
+        "destination": "https://1337brackets-backend.vercel.app/socket.io/$1"
+      }
     ]
   }
