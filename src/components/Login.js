@@ -1,4 +1,5 @@
-import axios from 'axios';
+// frontend/src/components/Login.js
+import api from '../axios'; // Импортируем настроенный экземпляр axios
 import { useNavigate } from 'react-router-dom';
 
 function Login() {
@@ -7,16 +8,17 @@ function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     const { email, password } = event.target.elements;
+
     try {
-      const response = await axios.post('/api/users/login', {
+      const response = await api.post('/users/login', {
         email: email.value,
         password: password.value,
       });
       localStorage.setItem('token', response.data.token);
-      console.log('Вход успешен');
+      console.log('🔍 Вход успешен:', response.data);
       navigate('/'); // Перенаправление на главную страницу
     } catch (error) {
-      console.error('Ошибка входа:', error.response ? error.response.data : error.message);
+      console.error('❌ Ошибка входа:', error.response ? error.response.data : error.message);
     }
   };
 
