@@ -1,6 +1,7 @@
+// frontend/src/components/Layout.js
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../axios';
 import io from 'socket.io-client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faComment } from '@fortawesome/free-regular-svg-icons';
@@ -16,26 +17,26 @@ function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const notificationRef = useRef(null); // Ссылка на окно уведомлений
+  const notificationRef = useRef(null);
   const navigate = useNavigate();
 
   const fetchUser = async (token) => {
     try {
-      const response = await axios.get('/api/users/me', {
+      const response = await api.get('/api/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUser(response.data);
-      const socket = io('http://localhost:3000');
+      // Используем REACT_APP_API_URL для socket.io
+      const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:3000');
       socket.emit('register', response.data.id);
       socket.on('notification', (notification) => {
         setNotifications((prev) => [notification, ...prev]);
       });
-      axios
-        .get(`/api/notifications?userId=${response.data.id}`)
-        .then((res) => setNotifications(res.data));
+      const notificationsResponse = await api.get(`/api/notifications?userId=${response.data.id}`);
+      setNotifications(notificationsResponse.data);
       return () => socket.disconnect();
     } catch (error) {
-      console.error('Ошибка получения данных пользователя:', error);
+      console.error('❌ Ошибка получения данных пользователя:', error.response ? error.response.data : error.message);
       localStorage.removeItem('token');
       setUser(null);
     }
@@ -73,7 +74,7 @@ function Layout() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/api/users/login', {
+      const response = await api.post('/api/users/login', {
         email,
         password,
       });
@@ -84,7 +85,7 @@ function Layout() {
       setPassword('');
     } catch (error) {
       setError(error.response?.data?.message || 'Ошибка входа');
-      console.error('Ошибка входа:', error);
+      console.error('❌ Ошибка входа:', error.response ? error.response.data : error.message);
     }
   };
 
@@ -106,7 +107,7 @@ function Layout() {
     const token = localStorage.getItem('token');
     if (!showNotifications && token && user) {
       try {
-        await axios.post(
+        await api.post(
           `/api/notifications/mark-read?userId=${user.id}`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
@@ -115,7 +116,7 @@ function Layout() {
           prev.map((n) => (n.type !== 'admin_request' ? { ...n, is_read: true } : n))
         );
       } catch (error) {
-        console.error('Ошибка отметки уведомлений:', error);
+        console.error('❌ Ошибка отметки уведомлений:', error.response ? error.response.data : error.message);
       }
     }
     setShowNotifications(!showNotifications);
@@ -124,13 +125,13 @@ function Layout() {
   const handleRespondAdminRequest = async (notification, action) => {
     const token = localStorage.getItem('token');
     try {
-      const response = await axios.post(
+      const response = await api.post(
         `/api/tournaments/${notification.tournament_id}/respond-admin-request`,
         { requesterId: notification.requester_id, action },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // Отмечаем уведомление как прочитанное
-      await axios.post(
+      await api.post(
         `/api/notifications/mark-read?userId=${user.id}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }

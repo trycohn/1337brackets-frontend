@@ -1,5 +1,6 @@
+// frontend/src/components/TournamentsList.js
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../axios'; // Импортируем настроенный экземпляр axios
 import { Link } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -7,6 +8,7 @@ import './Home.css';
 
 function TournamentsList() {
     const [tournaments, setTournaments] = useState([]);
+    const [error, setError] = useState(null);
     const [filters, setFilters] = useState({
         game: '',
         name: '',
@@ -25,10 +27,25 @@ function TournamentsList() {
     };
 
     useEffect(() => {
-        axios
-            .get('/api/tournaments')
-            .then((response) => setTournaments(response.data))
-            .catch((error) => console.error('Ошибка получения турниров:', error));
+        const fetchTournaments = async () => {
+            try {
+                const response = await api.get('/api/tournaments'); // Добавили /api/
+                // Проверяем, что response.data — это массив
+                if (Array.isArray(response.data)) {
+                    setTournaments(response.data);
+                    console.log('🔍 Tournaments data:', response.data);
+                } else {
+                    console.error('❌ Ожидался массив турниров, получено:', response.data);
+                    setError('Ошибка загрузки турниров: данные не в ожидаемом формате');
+                    setTournaments([]); // Исправили setTournament на setTournaments
+                }
+            } catch (error) {
+                console.error('❌ Ошибка получения турниров:', error.response ? error.response.data : error.message);
+                setError('Ошибка загрузки турниров');
+                setTournaments([]); // Исправили setTournament на setTournaments
+            }
+        };
+        fetchTournaments();
     }, []);
 
     useEffect(() => {
@@ -45,7 +62,7 @@ function TournamentsList() {
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [filterRefs.name, filterRefs.game, filterRefs.format, filterRefs.status, filterRefs.start_date, filters.name]); // Добавлены все зависимости
+    }, [filterRefs.name, filterRefs.game, filterRefs.format, filterRefs.status, filterRefs.start_date, filters.name]);
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
@@ -98,6 +115,7 @@ function TournamentsList() {
     return (
         <section className="tournaments-list">
             <h2>Список турниров</h2>
+            {error && <p className="error">{error}</p>}
             <table>
                 <thead>
                     <tr>
